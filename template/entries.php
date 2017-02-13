@@ -64,13 +64,13 @@
                                             <? $attachmentType = \App\Models\Entry::getAttachmentType($attachment); ?>
                                             <? if ($attachmentType == \App\Models\Entry::ATTACHMENT_TYPE_IMAGE): ?>
                                                 <div class="item">
-                                                    <img src="<?= url('attachments/show-attachment-preview/entry_attachments/'.$entry->id.'/images_preview/'.rawurlencode($attachment)) ?>">
+                                                    <img src="<?= url('entry_attachments/'.$entry->id.'/images_preview/'.rawurlencode($attachment)) ?>">
                                                     <input type="hidden" name="attachments[]" value="<?= $attachment ?>">
                                                     <span class="remove"></span>
                                                 </div>
                                             <? elseif ($attachmentType == \App\Models\Entry::ATTACHMENT_TYPE_VIDEO): ?>
                                                 <div class="item video">
-                                                    <img src="<?= url('attachments/show-video-thumb/'.$entry->id.'/'.rawurlencode($attachment)) ?>">
+                                                    <img src="<?= url('entry_attachments/'.$entry->id.'/video_thumbs/'.rawurlencode($attachment)) ?>">
                                                     <input type="hidden" name="attachments[]" value="<?= $attachment ?>">
                                                     <span class="remove"></span>
                                                 </div>
@@ -100,16 +100,13 @@
                             </form>
 
                             <div class="entry-content">
-                                <div class="entry-header">
-                                    <div class="entry-number">Запись #<?= $entry->id ?></div>
+                                <div class="entry-body">
                                     <div class="actions">
                                         <ul>
                                             <li class="edit">Редактировать запись</li>
                                             <li class="remove">Удалить запись</li>
                                         </ul>
                                     </div>
-                                </div>
-                                <div class="entry-body">
                                     <? $text = preg_replace('/#([\w|\p{L}]+)/u', '<a class="hash-tag" href="#">#\1</a>', nl2br($entry->text)) ?>
                                     <? $text = preg_replace('/^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/', '<a href="\0">\0</a>', $text) ?>
                                     <p><?= $text ?></p>
@@ -126,14 +123,14 @@
                                                     <div class="item">
                                                         <a class="fancybox" 
                                                            data-original-url="<?= url('attachments/show-original-image/'.$entry->id.'/'.rawurlencode($attachment)) ?>" 
-                                                           data-fancybox-group="<?= $entry->id ?>" href="<?= url('attachments/show-resized-image/entry_attachments/'.$entry->id.'/resized_images/'.rawurlencode($attachment)) ?>">
-                                                            <img class="" src="<?= url('attachments/show-attachment-preview/entry_attachments/'.$entry->id.'/images_preview/'.rawurlencode($attachment)) ?>">
+                                                           data-fancybox-group="<?= $entry->id ?>" href="<?= url('entry_attachments/'.$entry->id.'/resized_images/'.rawurlencode($attachment)) ?>">
+                                                            <img class="" src="<?= url('entry_attachments/'.$entry->id.'/images_preview/'.rawurlencode($attachment)) ?>">
                                                         </a>
                                                     </div>
                                                 <? elseif ($attachmentType == \App\Models\Entry::ATTACHMENT_TYPE_VIDEO): ?>
                                                     <div class="item">
                                                         <a class="open-video" href="#" id="<?= md5($attachment) ?>">
-                                                            <img src="<?= url('attachments/show-video-thumb/'.$entry->id.'/'.rawurlencode($attachment)) ?>">
+                                                            <img src="<?= url('entry_attachments/'.$entry->id.'/video_thumbs/'.rawurlencode($attachment)) ?>">
                                                         </a>
                                                         <div class="player" data-trigger="<?= md5($attachment) ?>" data-url="<?= url('attachments/'.$entry->id.'/'.rawurlencode($attachment).'/bitrates.m3u8') ?>"></div>
                                                     </div>
@@ -143,8 +140,8 @@
                                             <? endforeach ?>
                                         </div>
                                         <div class="show-all-attachments">
-                                            <a href="#" class="show-all">Показать все</a>
-                                            <a href="#" class="hide-all">Спрятать</a>
+                                            <a href="#" class="show-all"><img src="<?= url('assets/images/arrow_bottom.png') ?>" title="Показать все" /></a>
+                                            <a href="#" class="hide-all"><img src="<?= url('assets/images/arrow_top.png') ?>" title="Скрыть"/></a>
                                         </div>
                                         <div class="without-prev">
                                             <? foreach ($withoutPreview as $attachment): ?>
@@ -152,12 +149,12 @@
                                                 <? if (\App\Models\Entry::getAttachmentType($attachment) == \App\Models\Entry::ATTACHMENT_TYPE_AUDIO): ?>
                                                     <div class="audio">
                                                         <audio controls="true" preload="none">
-                                                            <source src="<?= url('attachments/play-audio/'.$entry->id.'/'.rawurlencode($attachment)) ?>" type="audio/mpeg">
+                                                            <source src="<?= url('entry_attachments/'.$entry->id.'/'.rawurlencode($attachment)) ?>" type="audio/mpeg">
                                                         </audio>
                                                         <span><?= $originalName ?></span>
                                                     </div>
                                                 <? else: ?>
-                                                    <a href="<?= url('attachments/download/'.$entry->id.'/'.rawurlencode($attachment)) ?>"><?= $originalName ?></a>
+                                                    <a href="<?= url('entry_attachments/'.$entry->id.'/'.rawurlencode($attachment)) ?>"><?= $originalName ?></a>
                                                 <? endif ?>
                                             <? endforeach ?>
                                         </div>
