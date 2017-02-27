@@ -1,4 +1,7 @@
 db.php
+config.php
+/.idea
 /cache
+/bingo
 /public/cache
 /public/entry_attachments

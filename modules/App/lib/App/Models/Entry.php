@@ -14,43 +14,44 @@ class Entry extends \ActiveEntity
      * @GeneratedValue(strategy="AUTO")
      */
     public $id;
-        
+
     /** @Column(type="text") */
     public $text;
-    
+
     /** @Column(type="datetime") */
     public $created;
 
     /** @Column(type="datetime", nullable=true) */
     public $updated;
-    
+
     /** @Column(type="array") */
     public $attachments;
-    
+
     /**
      * @ManyToOne(targetEntity="User")
      * @JoinColumn(name="author_id", referencedColumnName="id")
      */
     public $author;
-    
+
     /** @Column(type="boolean") */
     public $synced;
-    
+
     /** @Column(type="boolean") */
     public $deleted;
-    
+
     /** @Column(type="array", nullable=true) */
     public $attachment_preview_settings;
-    
+
     const CLOUD_STORAGE_BASE_FOLDER = 'Diary/Entries';
     const CLOUD_STORAGE_TEXT_FILENAME = 'text.txt';
-    
+
     const ATTACHMENT_TYPE_IMAGE = 'image';
     const ATTACHMENT_TYPE_VIDEO = 'video';
     const ATTACHMENT_TYPE_AUDIO = 'audio';
     const ATTACHMENT_TYPE_OTHER = 'other';
-    
-    function __construct() {
+
+    function __construct()
+    {
         $this->created = new \DateTime('now');
         $this->text = '';
         $this->synced = false;
@@ -58,21 +59,23 @@ class Entry extends \ActiveEntity
         $this->attachments = [];
         $this->attachment_previews_settings = [];
     }
-   
+
     /** @PreUpdate */
-    public function preUpdate(\Doctrine\ORM\Event\PreUpdateEventArgs $event) {
-        $tmpFilesDir = INDEX_DIR.'/cache/tmp_files'; 
+    public function preUpdate(\Doctrine\ORM\Event\PreUpdateEventArgs $event)
+    {
+        $tmpFilesDir = INDEX_DIR . '/cache/tmp_files';
         foreach ($this->attachments as $attachment) {
-            if (file_exists($tmpFilesDir.'/'.$attachment))
-                $this->synced = false;  
+            if (file_exists($tmpFilesDir . '/' . $attachment))
+                $this->synced = false;
         }
 
-        if ($event->hasChangedField('attachments') || $event->hasChangedField('text') || $event->hasChangedField('deleted')) 
+        if ($event->hasChangedField('attachments') || $event->hasChangedField('text') || $event->hasChangedField('deleted'))
             $this->synced = false;
     }
-    
+
     /** @PostPersist @PostUpdate */
-    function postPersist() {
+    function postPersist()
+    {
         preg_match_all("/#([\w|\p{L}]+)/u", $this->text, $matches);
         $oldTags = $this->getTags();
         $newTags = !empty($matches[1]) ? $matches[1] : [];
@@ -81,62 +84,62 @@ class Entry extends \ActiveEntity
             ->setParameter('type', get_class($this))
             ->setParameter('owner_id', $this->id)
             ->setParameter('values', array_diff($oldTags, $newTags))
-            ->execute()
-        ;
+            ->execute();
 
         $this->setTags($newTags);
-        
-        $tmpFilesDir = INDEX_DIR.'/cache/tmp_files';
-        $attachmentsDir = INDEX_DIR.'/entry_attachments/'.$this->id;
-        
+
+        $tmpFilesDir = INDEX_DIR . '/cache/tmp_files';
+        $attachmentsDir = INDEX_DIR . '/entry_attachments/' . $this->id;
+
         $directories = [
             $tmpFilesDir,
             $attachmentsDir,
-            $attachmentsDir.'/images_preview',
-            $attachmentsDir.'/resized_images'
+            $attachmentsDir . '/images_preview',
+            $attachmentsDir . '/resized_images'
         ];
-        
-        foreach ($directories as $dir) 
+
+        foreach ($directories as $dir)
             if (!file_exists($dir)) mkdir($dir, 0755, true);
 
         foreach ($this->attachments as $attachment) {
-            if (!file_exists($tmpFilesDir.'/'.$attachment)) continue;
-            
+            if (!file_exists($tmpFilesDir . '/' . $attachment)) continue;
+
             $attachmentType = self::getAttachmentType($attachment);
-            if ($attachmentType == self::ATTACHMENT_TYPE_IMAGE) {                
+            if ($attachmentType == self::ATTACHMENT_TYPE_IMAGE) {
                 foreach (['images_preview', 'resized_images'] as $subDir) {
-                    if (file_exists($tmpFilesDir.'/'.$subDir))
-                        @rename($tmpFilesDir.'/'.$subDir.'/'.$attachment, $attachmentsDir.'/'.$subDir.'/'.$attachment);
+                    if (file_exists($tmpFilesDir . '/' . $subDir))
+                        @rename($tmpFilesDir . '/' . $subDir . '/' . $attachment, $attachmentsDir . '/' . $subDir . '/' . $attachment);
                 }
             } else if (in_array($attachmentType, [self::ATTACHMENT_TYPE_OTHER, self::ATTACHMENT_TYPE_AUDIO])) {
-                @copy($tmpFilesDir.'/'.$attachment, $attachmentsDir.'/'.$attachment);
+                copy($tmpFilesDir . '/' . $attachment, $attachmentsDir . '/' . $attachment);
             }
         }
     }
-    
-    public static function getSearchQuery($id = false, $author = null, $text = '', $tags = []) {
+
+    public static function getSearchQuery($id = false, $author = null, $text = '', $tags = [])
+    {
         $qb = \Bingo::$em->createQueryBuilder()
             ->select('DISTINCT e')
             ->from('App\Models\Entry', 'e')
             ->where('e.deleted = false')
-            ->add('orderBy','e.created DESC, e.id DESC');
-        
+            ->add('orderBy', 'e.created DESC, e.id DESC');
+
         if ($id) {
             $qb->andWhere('e.id = :id');
             $qb->setParameter('id', $id);
         }
-        
+
         if ($author) {
             $qb->andWhere('e.author = :author');
             $qb->setParameter('author', $author);
         }
-        
+
         if ($text) {
             $qb->andWhere("e.text LIKE :text");
-            $qb->setParameter('text', '%'.$text.'%');
+            $qb->setParameter('text', '%' . $text . '%');
         }
-        
-        if (count($tags)) { 
+
+        if (count($tags)) {
             $qb->addSelect('COUNT(t.id) as HIDDEN tag_count');
             $qb->join('Meta\Models\Tag', 't', 'WITH', 't.owner_id = e.id AND t.type = :tag_type');
             $qb->andWhere('t.value IN (:tags)');
@@ -146,11 +149,12 @@ class Entry extends \ActiveEntity
             $qb->setParameter('tag_type', static::class);
             $qb->setParameter('tag_count', count($tags));
         }
-        
+
         return $qb->getQuery();
     }
-    
-    public static function getAttachmentType($attachment) {
+
+    public static function getAttachmentType($attachment)
+    {
         $extension = strtolower(pathinfo($attachment, PATHINFO_EXTENSION));
         if (in_array($extension, ['png', 'jpeg', 'gif', 'jpg'])) {
             return self::ATTACHMENT_TYPE_IMAGE;
@@ -159,15 +163,17 @@ class Entry extends \ActiveEntity
         } else if ($extension == 'mp3') {
             return self::ATTACHMENT_TYPE_AUDIO;
         }
-        
-        return  self::ATTACHMENT_TYPE_OTHER;
+
+        return self::ATTACHMENT_TYPE_OTHER;
     }
-    
-    public function getTags() {
-        return \Meta\Models\Tag::getTags($this); 
+
+    public function getTags()
+    {
+        return \Meta\Models\Tag::getTags($this);
     }
-    
-    public function setTags($tags) {
-        return \Meta\Models\Tag::setTags($this, $tags); 
+
+    public function setTags($tags)
+    {
+        return \Meta\Models\Tag::setTags($this, $tags);
     }
 }
